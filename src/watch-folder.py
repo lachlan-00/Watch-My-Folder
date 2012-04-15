@@ -32,10 +32,13 @@ conf.read(CONF)
 ### Define Variables ###
 
 if conf.get('conf', 'BackupPath') == 'USEDEFAULT':
-    BACKUP_PATH = os.path.join(LOCAL_PROFILE, "backup")
+    BACKUP_PATH = os.path.join(LOCAL_PROFILE, ".backup")
 else:
     BACKUP_PATH = conf.get('conf', 'BackupPath')
-HOME = str(conf.get('conf', 'FolderPath'))
+if conf.get('conf', 'FolderPath') == 'USEDEFAULT':
+    HOME = LOCAL_PROFILE + '/'
+else:
+    HOME = str(conf.get('conf', 'FolderPath'))
 SKIP = (conf.get('conf', 'SkipFiles')).split()
 WAITTIME = int(conf.get('conf', 'WaitTime'))
 
@@ -87,7 +90,7 @@ def check_file(inputfile):
 # Recursive loop function using watch_folders
 def check_folder(inputstring):
     if os.path.isdir(inputstring):
-        # wait three minutes to reduce LAN load
+        # wait to reduce load
         time.sleep(WAITTIME)
         watch_folder(inputstring)
     return
@@ -96,19 +99,22 @@ def check_folder(inputstring):
 
 # Search recursively through folders looking for files to backup
 def watch_folder(inputfolder):
-    for items in os.listdir(inputfolder):
-        skipme = False
-        for ignored in SKIP:
-            if ignored in items:
-                skipme = True
-            elif os.path.splitext(items)[1] in SKIP:
-                skipme = True
-        # run check_file if a file is found
-        if os.path.isfile(os.path.join(inputfolder, items)) and not skipme:
-            check_file(os.path.join(inputfolder, items))
-        # runs check_folder if a folder is found
-        if os.path.isdir(os.path.join(inputfolder, items)) and not skipme:
-            check_folder(os.path.join(inputfolder, items))
+    if os.path.abspath(inputfolder) == os.path.abspath(BACKUP_PATH):
+        print 'Skipping Backup Folder'
+    else:
+        for items in os.listdir(inputfolder):
+            skipme = False
+            for ignored in SKIP:
+                if ignored in items:
+                    skipme = True
+                elif os.path.splitext(items)[1] in SKIP:
+                    skipme = True
+            # run check_file if a file is found
+            if os.path.isfile(os.path.join(inputfolder, items)) and not skipme:
+                check_file(os.path.join(inputfolder, items))
+            # runs check_folder if a folder is found
+            if os.path.isdir(os.path.join(inputfolder, items)) and not skipme:
+                check_folder(os.path.join(inputfolder, items))
     return
 
 
@@ -119,7 +125,7 @@ if not os.path.exists(BACKUP_PATH):
     os.makedirs(BACKUP_PATH)
 while 1:
     # wait a bit for things to settle
-    time.sleep(60)
+    time.sleep(10)
     print 'Scanning Home Folder'
     watch_folder(HOME)
     print ''
