@@ -17,19 +17,21 @@ About:
 Settings:
  * FolderPath - The path that you will be watching. (eg. H:/)
  * BackupPath - The path where the backups are stored.
- * WaitTime - Wait before processing to reduce network load.
- * SkipFiles - Folder names and file extensions that will be
-   skipped by the program.
+ * WaitTime - Wait before each folder to reduce network load.
+ * SkipFiles - File extensions that will be skipped when found.
+   (Single space seperated. ' ')
+ * SkipFolders - Skip directories that contains these strings.
+   (Four space seperated. '    ')
 
 Defaults:
- * Folderpath = %userprofile% (C:\Users\%username%\)
- * Backuppath = %Userprofile%\.backup (Ignored by the program.)
+ * FolderPath = %userprofile% (C:\Users\%username%\)
+ * BackupPath = %Userprofile%\.backup (Ignored by the program.)
 
 Usage:
- * Run this Installer
+ * Extract to your profile (C:\Users\%username%\.backup\)
  * Set desired values in the config.txt file.
  * Run the program from the start menu.
 
-Memory usage is quite low (2mb) while watching and wait times are an effective way of reducing network load. If you are not watching a network folder a lower watch time is recommended.
+Memory usage is quite low (2-3mb) while watching and wait times are an effective way of reducing network load. If you are not watching a network folder a lower watch time is recommended.
 
 When typing folder paths try and use the reverse slashes. (C:/users/username/backup)

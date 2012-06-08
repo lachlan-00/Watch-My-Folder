@@ -29,69 +29,73 @@ import shutil
 import ConfigParser
 
 ### Define Constants ###
-
 LOCAL_PROFILE = os.getenv("userprofile")
 CONF = 'config.txt'
 conf = ConfigParser.RawConfigParser()
 conf.read(CONF)
 
 ### Define Variables ###
-
 folderList = str(conf.get('conf', 'FolderPath'))
 folderList = folderList.split(',')
 backupList = str(conf.get('conf', 'BackupPath'))
 backupList = backupList.split(',')
-skipList = (conf.get('conf', 'SkipFiles')).split()
+skipFileList = (conf.get('conf', 'SkipFiles')).split(' ')
+skipFolderList = (conf.get('conf', 'SkipFolders')).split('    ')
 waitTime = int(conf.get('conf', 'WaitTime'))
-scancyclecount = 0
+scanCycleCount = 0
+
 
 ### Define Functions ###
-
-
 # File operation Function
-def check_file(inputfile, backupPath):
-    backupfile = os.path.normpath(backupPath + (inputfile.replace(HOME, '')))
-    backupdir = os.path.dirname(backupfile)
+def check_file(inputFile, backupPath, homePath):
+    backupFile = (os.path.normpath(backupPath +
+                    (inputFile.replace(homePath, ''))))
+    backupDir = os.path.dirname(backupFile)
     # Only backup files that contain data
-    if os.stat(inputfile)[6] == 0:
+    if os.stat(inputFile)[6] == 0:
         pass
     # Copy file if it doesn't exist in backup location
-    elif not os.path.isfile(backupfile):
-        if not os.path.exists(backupdir):
+    elif not os.path.isfile(backupFile):
+        if not os.path.exists(backupDir):
             try:
-                os.makedirs(backupdir)
+                os.makedirs(backupDir)
             except:
                 pass
         try:
-            shutil.copyfile(inputfile, backupfile)
-            print 'New Backup: ' + backupfile
+            shutil.copyfile(inputFile, backupFile)
+            print 'New Backup: ' + backupFile
         except IOError:
             pass
-    elif os.path.isfile(backupfile):
-        # Compare existing files and backup modified versions since the last cycle.
-        if not os.stat(inputfile)[6] == os.stat(backupfile)[6] or not os.path.getmtime(inputfile) < os.path.getmtime(backupfile):
-            newfile = backupfile
-            newcount = 0
+    elif os.path.isfile(backupFile):
+        # Compare existing files and backup the modified version.
+        if (not os.stat(inputFile)[6] == os.stat(backupFile)[6] or not
+                os.path.getmtime(inputFile) < os.path.getmtime(backupFile)):
+            newFile = backupFile
+            newCount = 0
             # Create new destination (for versioning)
-            while os.path.isfile(newfile):
-                if newcount == 6:
-                    five = os.path.join(os.path.dirname(newfile), (os.path.basename(newfile) + '-5.old'))
-                    zero = os.path.join(os.path.dirname(newfile), (os.path.basename(newfile) + '-0.old'))
+            while os.path.isfile(newFile):
+                if newCount == 6:
+                    five = (os.path.join(os.path.dirname(newFile),
+                                (os.path.basename(newFile) + '-5.old')))
+                    zero = (os.path.join(os.path.dirname(newFile),
+                                (os.path.basename(newFile) + '-0.old')))
                     shutil.copyfile(five, zero)
-                    tempcount = ['1','2','3','4','5']
-                    for count in tempcount:
+                    tempCount = ['1', '2', '3', '4', '5']
+                    for count in tempCount:
                         temp = '-' + count + '.old'
-                        os.remove(os.path.join(os.path.dirname(newfile), (os.path.basename(newfile) + temp)))
-                    newcount = 1
-                temp = '-' + str(newcount) + '.old'
-                oldfile = os.path.join(os.path.dirname(newfile), (os.path.basename(newfile) + temp))
-                if not os.path.isfile(oldfile):
-                    newfile = oldfile
-                newcount = newcount + 1
-            shutil.move(backupfile, newfile)
+                        os.remove(os.path.join(os.path.dirname(newFile),
+                                        (os.path.basename(newFile) + temp)))
+                    newCount = 1
+                temp = '-' + str(newCount) + '.old'
+                oldFile = (os.path.join(os.path.dirname(newFile),
+                                (os.path.basename(newFile) + temp)))
+                if not os.path.isfile(oldFile):
+                    newFile = oldFile
+                newCount = newCount + 1
+            shutil.move(backupFile, newFile)
             try:
-                shutil.copyfile(inputfile, backupfile)
-                print 'New Version: ' + newfile
+                shutil.copyfile(inputFile, backupFile)
+                print 'New Version: ' + newFile
             except IOError:
                 # Error: File in Use
                 pass
@@ -99,36 +103,39 @@ def check_file(inputfile, backupPath):
 
 
 # Recursive loop function using watch_folders
-def check_folder(inputstring, backupPath):
-    if os.path.isdir(inputstring):
+def check_folder(inputString, backupPath, homePath):
+    if os.path.isdir(inputString):
         # wait to reduce load
         time.sleep(waitTime)
-        watch_folder(inputstring, backupPath)
+        watch_folder(inputString, backupPath, homePath)
     return
-
-### Main Function ###
 
 
 # Search recursively through folders looking for files to backup
-def watch_folder(inputfolder, backupPath):
-    if os.path.abspath(inputfolder) == os.path.abspath(backupPath):
-        print 'Skipping Backup Folder'
-    else:
+def watch_folder(inputFolder, backupPath, homePath):
+    skipMe = False
+    for items in skipFolderList:
+        if items.lower() in inputFolder.lower():
+            skipMe = True
+    if not skipMe:
         try:
-            for items in os.listdir(inputfolder):
+            for items in os.listdir(inputFolder):
                 skipme = False
-                for ignored in skipList:
-                    if ignored in items:
+                for ignored in skipFileList:
+                    if ignored.lower() in items.lower():
                         skipme = True
-                    elif os.path.splitext(items)[1] in skipList:
+                    elif os.path.splitext(items)[1] in skipFileList:
                         skipme = True
                 # Run check_file if a file is found
-                testPath = os.path.join(inputfolder, items)
-                if os.path.isfile(testPath) and not skipme:
-                    check_file(os.path.join(inputfolder, items), backupPath)
+                if (os.path.isfile(os.path.join(inputFolder, items)) and not
+                        skipme):
+                    temp = os.path.join(inputFolder, items)
+                    check_file(temp, backupPath, homePath)
                 # Run check_folder if a folder is found
-                if os.path.isdir(testPath) and not skipme:
-                    check_folder(testPath, backupPath)
+                if (os.path.isdir(os.path.join(inputFolder, items)) and not
+                        skipme):
+                    temp = os.path.join(inputFolder, items)
+                    check_folder(temp, backupPath, homePath)
         # Ignore Inaccessible Directories
         except WindowsError:
             # Error: Inaccessible Directory
@@ -136,19 +143,13 @@ def watch_folder(inputfolder, backupPath):
     return
 
 
-### Main Program ###
-
-# Create main backup folder if not found
-while 1:
-    #Begin Scanning
-    scancyclecount = scancyclecount + 1
-    print ''
-    print 'Beginning Scan Cycle ' + str(scancyclecount)
-    for destination in backupList:
+### Main Function ###
+def main(inputFolder, outputFolder):
+    for destination in outputFolder:
         if destination == 'USEDEFAULT':
             destination = os.path.join(LOCAL_PROFILE, ".backup")
         print 'Copying files to: ' + destination
-        for items in folderList:
+        for items in inputFolder:
             if not items == '':
                 time.sleep(waitTime)
                 if items == 'USEDEFAULT':
@@ -157,15 +158,26 @@ while 1:
                 else:
                     backupPath = (destination + '/' +
                                     (items).replace(':\\', '\\') + '/')
-                HOME = items
+                homePath = items
                 print 'Opening folder...  ' + items
                 try:
                     if not os.path.exists(backupPath):
                         os.makedirs(backupPath)
                     if os.path.isdir(items):
-                        watch_folder(items, backupPath)
+                        watch_folder(items, backupPath, homePath)
                 except WindowsError:
                     # Skip error when directory is missing
                     print '** Error: Moving to next directory'
                     pass
                 print ''
+
+### Main Program ###
+
+# Create main backup folder if not found
+while 1:
+    #Begin Scanning
+    scanCycleCount = scanCycleCount + 1
+    print 'Beginning Scan Cycle ' + str(scanCycleCount)
+    main(folderList, backupList)
+    #Sleep after each cycle
+    time.sleep(120)
