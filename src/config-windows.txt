@@ -1,7 +1,7 @@
 [conf]
 
-FolderPath = USEDEFAULT,H:\,
-BackupPath = USEDEFAULT,C:\backup,
+FolderPath = USEDEFAULT,H:\
+BackupPath = USEDEFAULT,C:\backup
 
 WaitTime = 0
 SkipFiles = $RECYCLE.BIN RECYCLER .backup .hdrive .pst .ost .mp3 .avi .iso .mpg .msi .exe .mpeg .aac .wav .mp4 .wma .mov .mod .mts .tmp .dat .xbel .old .db

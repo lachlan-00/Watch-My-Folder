@@ -28,9 +28,18 @@ import time
 import shutil
 import ConfigParser
 
+
 ### Define Constants ###
-LOCAL_PROFILE = os.getenv("userprofile")
-CONF = 'config.txt'
+if not str(os.getenv("userprofile")) == 'None':
+    # Set Windows specific constants
+    LOCAL_PROFILE = os.getenv("userprofile")
+    CONF = 'config-windows.txt'
+    SLASH = '\\'
+if not str(os.getenv("HOME")) == 'None':
+    # Set Linux Specific constants
+    LOCAL_PROFILE = os.getenv("HOME")
+    CONF = 'config-linux.txt'
+    SLASH = '/'
 conf = ConfigParser.RawConfigParser()
 conf.read(CONF)
 
@@ -46,6 +55,29 @@ scanCycleCount = 0
 
 
 ### Define Functions ###
+# Initialise at first run, check backups and restore data if possible.
+def first_run():
+    if not os.path.isfile(LOCAL_PROFILE + SLASH + '.backup' +
+                           SLASH + 'FirstRun.txt'):
+        print 'FirstRun.txt not found... Initialising.'
+        if backupList[0] == 'USEDEFAULT':
+            restoreFrom = os.path.join(LOCAL_PROFILE, ".backup\profile")
+        else:
+            restoreFrom = backupList[0]
+        if folderList[0] == 'USEDEFAULT':
+            restoreTo = LOCAL_PROFILE
+        else:
+            restoreTo = folderList[0]
+        try:
+            shutil.copy(restoreFrom, restoreTo)
+        except IOError:
+            print 'Error restoring data.'
+        f = open((LOCAL_PROFILE + SLASH + '.backup' + SLASH +
+                    'FirstRun.txt'), "w")
+        f.write('Do not delete unless you want to restore your data.')
+        f.close()
+
+
 # File operation Function
 def check_file(inputFile, backupPath, homePath):
     backupFile = (os.path.normpath(backupPath +
@@ -97,7 +129,7 @@ def check_file(inputFile, backupPath, homePath):
                 shutil.copyfile(inputFile, backupFile)
                 print 'New Version: ' + newFile
             except IOError:
-                # Error: File in Use
+                print 'Error: File in Use'
                 pass
     return
 
@@ -137,13 +169,15 @@ def watch_folder(inputFolder, backupPath, homePath):
                     temp = os.path.join(inputFolder, items)
                     check_folder(temp, backupPath, homePath)
         # Ignore Inaccessible Directories
-        except WindowsError:
-            # Error: Inaccessible Directory
+        except OSError:
+            print 'Error: Inaccessible Directory'
+            pass
+        except:
             pass
     return
 
 
-### Main Function ###
+### Main Function: Back up each source folder into each destination.
 def main(inputFolder, outputFolder):
     for destination in outputFolder:
         if destination == 'USEDEFAULT':
@@ -157,25 +191,30 @@ def main(inputFolder, outputFolder):
                     backupPath = destination + '/profile/'
                 else:
                     backupPath = (destination + '/' +
-                                    (items).replace(':\\', '\\') + '/')
+                                    (items).replace(':\\', '\\') + SLASH)
                 homePath = items
                 print 'Opening folder...  ' + items
                 try:
+                    # Create backup folder if not found
                     if not os.path.exists(backupPath):
                         os.makedirs(backupPath)
+                    # Start backup if the input exists
                     if os.path.isdir(items):
                         watch_folder(items, backupPath, homePath)
-                except WindowsError:
-                    # Skip error when directory is missing
+                except OSError:
+                    # Skip error when directory missing or permission denied
                     print '** Error: Moving to next directory'
+                    pass
+                except:
                     pass
                 print ''
 
-### Main Program ###
 
-# Create main backup folder if not found
+# Check for and initialise data
+#first_run()
+
+# Begin Main Program
 while 1:
-    #Begin Scanning
     scanCycleCount = scanCycleCount + 1
     print 'Beginning Scan Cycle ' + str(scanCycleCount)
     main(folderList, backupList)
