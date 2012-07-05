@@ -207,7 +207,10 @@ class watch(Process):
                 for folders in insplit:
                     if items in folders:
 	                #insplit = insplit[1:]
-                        insplit.remove(items)
+                        try:
+                            insplit.remove(items)
+                        except ValueError:
+                            pass
         for items in insplit:
             outdir = outdir + SLASH + items
         backupFile = os.path.normpath(backupPath + outdir + SLASH + (os.path.basename(inputFile)))
@@ -300,7 +303,7 @@ class watch(Process):
                     if os.path.isdir(os.path.join(inputFolder, items)) and not skipme:
                         self.check_folder(os.path.join(inputFolder, items), backupPath)
             # Ignore Inaccessible Directories
-            except WindowsError:
+            except OSError:
                 # Error: Inaccessible Directory
                 pass
         return
@@ -323,7 +326,7 @@ class watch(Process):
                     if not os.path.exists(self.inputFolder):
                        os.makedirs(self.inputFolder)
                     self.watch_folder(self.destination, self.inputFolder)
-                except WindowsError:
+                except OSError:
                     # Skip error when directory is missing
                     print '** Error: Moving to next directory'
                     pass
