@@ -59,7 +59,6 @@ class WorkerThread(Thread):
 class watch_my_folder(gtk.Builder):
     """ Initialise Main Window """
     def __init__(self):
-        #global watch_process
         self.builder = gtk.Builder()
         self.builder.add_from_file("watch-my-folder.ui")
         self.window = self.builder.get_object("main_window")
@@ -106,7 +105,6 @@ class watch_my_folder(gtk.Builder):
         """ Stop the scan process """
         global STOP
         self.statuslabel.set_text('Scan Stopped')
-        #global watch_process
         if not self.worker:
             self.worker = WorkerThread(self)
         if self.worker.is_alive():
