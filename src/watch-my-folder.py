@@ -27,16 +27,14 @@ import os
 import time
 import shutil
 import ConfigParser
-import subprocess
-import sys
 
 from multiprocessing import Process
-from threading import *
+from threading import Thread
 
 
-windowOpen = True
+WINDOWOPEN = True
 STOP = False
-started = False
+STARTED = False
 OS = os.name
 if OS == 'nt':
     SLASH = '\\'
@@ -44,7 +42,6 @@ elif OS == 'posix':
     SLASH = '/'
 
 class WorkerThread(Thread):
-
     """Worker Thread Class."""
     def __init__(self, notify_window):
         """Init Worker Thread Class."""
@@ -59,30 +56,30 @@ class WorkerThread(Thread):
         watch.main(watch())
 
 
-class watch_my_folder(gtk.Window):
-    ### Initialise Main Window ###
+class watch_my_folder(gtk.Builder):
+    """ Initialise Main Window """
     def __init__(self):
-        global watch_process
-        self.Builder = gtk.Builder()
-        self.Builder.add_from_file("watch-my-folder.ui")
-        self.Window = self.Builder.get_object("main_window")
-        self.Window.set_title("Watch My Folder")
-        self.Window.connect("delete-event", self.delete_event)
-        self.statuslabel = self.Builder.get_object("statuslabel")
+        #global watch_process
+        self.builder = gtk.Builder()
+        self.builder.add_from_file("watch-my-folder.ui")
+        self.window = self.builder.get_object("main_window")
+        self.window.set_title("Watch My Folder")
+        self.window.connect("delete-event", self.delete_event)
+        self.statuslabel = self.builder.get_object("statuslabel")
         self.statuslabel.set_text('Scan Running')
-        self.quitbutton = self.Builder.get_object("quitbutton")
-        self.quitbutton.connect("clicked",self.quit)
-        self.startButton = self.Builder.get_object("startbutton")
-        self.startButton.connect("clicked",self.start_scan)
-        self.stopButton = self.Builder.get_object("stopbutton")
-        self.stopButton.connect("clicked",self.stop_scan)
+        self.quitbutton = self.builder.get_object("quitbutton")
+        self.quitbutton.connect("clicked", self.quit)
+        self.startbutton = self.builder.get_object("startbutton")
+        self.startbutton.connect("clicked", self.start_scan)
+        self.stopbutton = self.builder.get_object("stopbutton")
+        self.stopbutton.connect("clicked", self.stop_scan)
         #show all of the stuff
-        self.Window.show_all()
+        self.window.show_all()
         #make a status icon
         self.statusicon = gtk.status_icon_new_from_file('watch.png')
         self.statusicon.connect('activate', self.status_clicked )
         self.statusicon.set_tooltip("Watch My Folder")
-        self.Window.hide()
+        self.window.hide()
         #Start main function first
         self.worker = None
         if not self.worker:
@@ -92,8 +89,8 @@ class watch_my_folder(gtk.Window):
 
 
     def start_scan(self, *args):
+        """ Start the scan process separate of the GUI """
         self.statuslabel.set_text('Scan Running')
-        global watch_process
         global STOP
         if not self.worker:
             self.worker = WorkerThread(self)
@@ -106,8 +103,10 @@ class watch_my_folder(gtk.Window):
 
 
     def stop_scan(self, *args):
+        """ Stop the scan process """
+        global STOP
         self.statuslabel.set_text('Scan Stopped')
-        global watch_process
+        #global watch_process
         if not self.worker:
             self.worker = WorkerThread(self)
         if self.worker.is_alive():
@@ -119,225 +118,245 @@ class watch_my_folder(gtk.Window):
         return
                 
 
-    def quit(self,button):
+    def quit(self, button):
+        """ Close down the program and quit the main loop """
         self.stop_scan()
         #quit the gtk main loop
         gtk.main_quit()
         return False
 
 
-    def delete_event(self,window,event):
-        global windowOpen
+    def delete_event(self,window, event):
+        """ Hide the window then the close button is clicked """
+        global WINDOWOPEN
         #don't delete; hide instead
-        self.Window.hide_on_delete()
-        windowOpen = False
+        self.window.hide_on_delete()
+        WINDOWOPEN = False
         return True
  
 
-    def status_clicked(self,status):
-        global windowOpen
+    def status_clicked(self, status):
+        """ hide and unhide the window when clicking the status icon """
+        global WINDOWOPEN
         #unhide the window
-        if not windowOpen:
-            self.Window.show_all()
-            windowOpen = True
-        elif windowOpen:
-            self.delete_event(self, self.Window)
+        if not WINDOWOPEN:
+            self.window.show_all()
+            WINDOWOPEN = True
+        elif WINDOWOPEN:
+            self.delete_event(self, self.window)
 
 
 class watch(Process):
-    ### Define Functions ###
+    """ Class that controls the scan process """
     def __init__(self):
         global STOP
-        global OS
+        #global OS
         global SLASH
         global ORIGINAL_FOLDER
         if OS == 'nt':
-            LOCAL_PROFILE = os.getenv("userprofile")
-            USERNAME = os.getenv("username")
-            CONF = 'config-windows.txt'
+            local_profile = os.getenv("userprofile")
+            username = os.getenv("username")
+            conf_file = 'config-windows.txt'
         elif OS == 'posix':
-            LOCAL_PROFILE = os.getenv("HOME")
-            USERNAME = os.getenv("USER")
-            CONF = 'config-linux.txt'
+            local_profile = os.getenv("HOME")
+            username = os.getenv("USER")
+            conf_file = 'config-linux.txt'
         else:
             STOP = True
         if STOP:
             return
         self.conf = ConfigParser.RawConfigParser()
-        self.conf.read(CONF)
-        self.skipFileList = self.conf.get('conf', 'SkipFiles').split(' ')
-        self.skipFolderList = self.conf.get('conf', 'SkipFolders').split('    ')
-        self.waitTime = self.conf.get('conf', 'WaitTime')
+        self.conf.read(conf_file)
+        self.skip_file_list = self.conf.get('conf', 'SkipFiles').split(' ')
+        self.skip_folder_list = self.conf.get('conf', 'SkipFolders').split('    ')
+        self.wait_time = self.conf.get('conf', 'WaitTime')
         try:
-            self.waitTime = int(self.waitTime)
+            self.wait_time = int(self.wait_time)
         except:
-            self.waitTime = 1
+            self.wait_time = 1
         self.destination = self.conf.get('conf', 'BackupPath')
-        self.inputFolder = self.conf.get('conf', 'FolderPath')
+        self.input_folder = self.conf.get('conf', 'FolderPath')
         if OS == 'nt':
-            self.destination = self.destination.replace('%username%', USERNAME)
-            self.inputFolder = self.inputFolder.replace('%username%', USERNAME)
-            self.destination = self.destination.replace('%userprofile%', LOCAL_PROFILE)
-            self.inputFolder = self.inputFolder.replace('%userprofile%', LOCAL_PROFILE)
+            self.destination = self.destination.replace('%username%', 
+                                                        username)
+            self.input_folder = self.input_folder.replace('%username%', 
+                                                        username)
+            self.destination = self.destination.replace('%userprofile%', 
+                                                        local_profile)
+            self.input_folder = self.input_folder.replace('%userprofile%', 
+                                                        local_profile)
         if OS == 'posix':
-            self.destination = self.destination.replace('$USER', USERNAME)
-            self.inputFolder = self.inputFolder.replace('$USER', USERNAME)
-            self.destination = self.destination.replace('$HOME', LOCAL_PROFILE)
-            self.inputFolder = self.inputFolder.replace('$HOME', LOCAL_PROFILE)
+            self.destination = self.destination.replace('$USER', username)
+            self.input_folder = self.input_folder.replace('$USER', username)
+            self.destination = self.destination.replace('$HOME', local_profile)
+            self.input_folder = self.input_folder.replace('$HOME', local_profile)
         if not os.path.isdir(self.destination):
-            self.destination = LOCAL_PROFILE + SLASH + '.backup' + SLASH + 'BACKUP'
-        if not os.path.isdir(self.inputFolder):
-            self.inputFolder = LOCAL_PROFILE
-        ORIGINAL_FOLDER = self.inputFolder
+            self.destination = (local_profile + SLASH + '.backup' + SLASH + 
+                                'BACKUP')
+        if not os.path.isdir(self.input_folder):
+            self.input_folder = local_profile
+        ORIGINAL_FOLDER = self.input_folder
         
 
-    # File operation Function
     def check_file(self, *args):
+        """ File operation Function """
         global STOP
         global SLASH
+        global ORIGINAL_FOLDER
         if STOP:
             return
-        inputFile = args[0]
-        backupPath = args[1]
-        insplit = os.path.dirname(inputFile).split(SLASH)
-        origFolder =  ORIGINAL_FOLDER.split(SLASH)
+        input_file = args[0]
+        backup_path = args[1]
+        insplit = os.path.dirname(input_file).split(SLASH)
+        orig_folder =  ORIGINAL_FOLDER.split(SLASH)
         outdir = ''
-        for items in origFolder:
+        for items in orig_folder:
             if not len(insplit) == 0:
                 for folders in insplit:
                     if items in folders:
-	                #insplit = insplit[1:]
                         try:
                             insplit.remove(items)
                         except ValueError:
                             pass
         for items in insplit:
             outdir = outdir + SLASH + items
-        backupFile = os.path.normpath(backupPath + outdir + SLASH + (os.path.basename(inputFile)))
-        backupDir = os.path.dirname(backupFile)
+        backup_file = (os.path.normpath(backup_path + outdir + SLASH + 
+                        (os.path.basename(input_file))))
+        backup_dir = os.path.dirname(backup_file)
         # Only backup files that contain data
-        if os.stat(inputFile)[6] == 0:
+        if os.stat(input_file)[6] == 0:
             pass
         # Copy file if it doesn't exist in backup location
-        elif not os.path.isfile(backupFile):
-            if not os.path.exists(backupDir):
+        elif not os.path.isfile(backup_file):
+            if not os.path.exists(backup_dir):
                 try:
-                    os.makedirs(backupDir)
+                    os.makedirs(backup_dir)
                 except:
                     pass
             try:
-                shutil.copyfile(inputFile, backupFile)
-                print 'New Backup: ' + backupFile
+                shutil.copyfile(input_file, backup_file)
+                print 'New Backup: ' + backup_file
             except IOError:
                 pass
-        elif os.path.isfile(backupFile):
-            # Compare existing files and backup modified versions since the last cycle.
-            if not os.stat(inputFile)[6] == os.stat(backupFile)[6] or not os.path.getmtime(inputFile) < os.path.getmtime(backupFile):
-                newFile = backupFile
-                newCount = 0
+        elif os.path.isfile(backup_file):
+            # Compare files and backup modified versions since the last cycle.
+            if (not os.stat(input_file)[6] == os.stat(backup_file)[6] or 
+                not os.path.getmtime(input_file) < os.path.getmtime(backup_file)):
+                new_file = backup_file
+                new_count = 0
                 # Create new destination (for versioning)
-                while os.path.isfile(newFile):
-                    if newCount == 6:
-                        five = os.path.join(os.path.dirname(newFile), (os.path.basename(newFile) + '-5.old'))
-                        zero = os.path.join(os.path.dirname(newFile), (os.path.basename(newFile) + '-0.old'))
+                while os.path.isfile(new_file):
+                    if new_count == 6:
+                        five = (os.path.join(os.path.dirname(new_file), 
+                                             (os.path.basename(new_file) + 
+                                                 '-5.old')))
+                        zero = (os.path.join(os.path.dirname(new_file), 
+                                             (os.path.basename(new_file) + 
+                                                 '-0.old')))
                         shutil.copyfile(five, zero)
-                        tempCount = ['1','2','3','4','5']
-                        for count in tempCount:
+                        temp_count = ['1', '2', '3', '4', '5']
+                        for count in temp_count:
                             temp = '-' + count + '.old'
-                            os.remove(os.path.join(os.path.dirname(newFile), (os.path.basename(newFile) + temp)))
-                        newCount = 1
-                    temp = '-' + str(newCount) + '.old'
-                    oldFile = os.path.join(os.path.dirname(newFile), (os.path.basename(newFile) + temp))
-                    if not os.path.isfile(oldFile):
-                        newFile = oldFile
-                    newCount = newCount + 1
-                shutil.move(backupFile, newFile)
+                            os.remove(os.path.join(os.path.dirname(new_file), 
+                                                   (os.path.basename(new_file) +
+                                                       temp)))
+                        new_count = 1
+                    temp = '-' + str(new_count) + '.old'
+                    old_file = os.path.join(os.path.dirname(new_file), 
+                                           (os.path.basename(new_file) + temp))
+                    if not os.path.isfile(old_file):
+                        new_file = old_file
+                    new_count = new_count + 1
+                shutil.move(backup_file, new_file)
                 try:
-                    shutil.copyfile(inputFile, backupFile)
-                    print 'New Version: ' + newFile
+                    shutil.copyfile(input_file, backup_file)
+                    print 'New Version: ' + new_file
                 except IOError:
                     # Error: File in Use
                     pass
         return
 
-
-    # Recursive loop function using watch_folders
     def check_folder(self, *args):
+        """ Recursive loop function for watch_folder function """
         global STOP
         if STOP:
             return
-        inputString = args[0]
-        backupPath = args[1]
-        if os.path.isdir(inputString):
+        input_string = args[0]
+        backup_path = args[1]
+        if os.path.isdir(input_string):
             # wait to reduce load
-            time.sleep(self.waitTime)
-            self.watch_folder(backupPath, inputString)
+            time.sleep(self.wait_time)
+            self.watch_folder(backup_path, input_string)
         return
 
 
-    # Search recursively through folders looking for files to backup
     def watch_folder(self, *args):
+        """ Search recursively through folders looking for files """
         global STOP
         if STOP:
             return
-        backupPath = args[0]
-        inputFolder = args[1]
-        print 'opening: ' + inputFolder
-        skipMe = False
-        for items in self.skipFolderList:
-            if items.lower() in inputFolder.lower():
-                skipMe = True
-        if not skipMe:
+        backup_path = args[0]
+        input_folder = args[1]
+        print 'Opening: ' + input_folder
+        skip_me = False
+        for items in self.skip_folder_list:
+            if items.lower() in input_folder.lower():
+                skip_me = True
+        if not skip_me:
             try:
-                for items in os.listdir(inputFolder):
+                for items in os.listdir(input_folder):
                     skipme = False
-                    for ignored in self.skipFileList:
+                    for ignored in self.skip_file_list:
                         if ignored.lower() in items.lower():
                             skipme = True
-                        elif os.path.splitext(items)[1] in self.skipFileList:
+                        elif os.path.splitext(items)[1] in self.skip_file_list:
                             skipme = True
                     # Run check_file if a file is found
-                    if os.path.isfile(os.path.join(inputFolder, items)) and not skipme:
-                        self.check_file(os.path.join(inputFolder, items), backupPath)
+                    if (os.path.isfile(os.path.join(input_folder, items)) and 
+                        not skipme):
+                        self.check_file(os.path.join(input_folder, items), 
+                                        backup_path)
                     # Run check_folder if a folder is found
-                    if os.path.isdir(os.path.join(inputFolder, items)) and not skipme:
-                        self.check_folder(os.path.join(inputFolder, items), backupPath)
+                    if (os.path.isdir(os.path.join(input_folder, items)) and 
+                        not skipme):
+                        self.check_folder(os.path.join(input_folder, items), 
+                                          backup_path)
             # Ignore Inaccessible Directories
-            except OSError:
+            except:
                 # Error: Inaccessible Directory
                 pass
         return
 
 
-    ### Main Function ###
     def main(self, *args):
+        """ Main Function """
         global STOP
         if STOP:
             return
-        global started
-        if not started:
-            started = True
+        global STARTED
+        if not STARTED:
+            STARTED = True
             while 1 and not STOP:
-                time.sleep(self.waitTime)
-                print 'Opening folder...'
+                time.sleep(self.wait_time)
                 try:
                     if not os.path.exists(self.destination):
-                       os.makedirs(self.destination)
-                    if not os.path.exists(self.inputFolder):
-                       os.makedirs(self.inputFolder)
-                    self.watch_folder(self.destination, self.inputFolder)
-                except OSError:
+                        os.makedirs(self.destination)
+                    if not os.path.exists(self.input_folder):
+                        os.makedirs(self.input_folder)
+                    self.watch_folder(self.destination, self.input_folder)
+                except:
                     # Skip error when directory is missing
                     print '** Error: Moving to next directory'
                     pass
                 print ''
-            started = False
+            STARTED = False
 
     def stop_main(self):
+        """ Set stop to force the main function to stop """
         global STOP
         STOP = True
 
-if __name__=="__main__":
+if __name__ == "__main__":
     gtk.gdk.threads_init()
     watch_my_folder()
 
