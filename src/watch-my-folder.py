@@ -183,7 +183,12 @@ class watch(Process):
                                                         local_profile)
             self.input_folder = self.input_folder.replace('%userprofile%', 
                                                         local_profile)
+            self.skip_tilde = False
         if OS == 'posix':
+            if self.conf.get('conf', 'SkipTildeFiles') == 'True':
+                self.skip_tilde =  True
+            else:
+                self.skip_tilde =  False
             self.destination = self.destination.replace('$USER', username)
             self.input_folder = self.input_folder.replace('$USER', username)
             self.destination = self.destination.replace('$HOME', local_profile)
@@ -309,6 +314,9 @@ class watch(Process):
                             skipme = True
                         elif os.path.splitext(items)[1] in self.skip_file_list:
                             skipme = True
+                        elif self.skip_tilde:
+                            if items[-1] == '~':
+                                skipme=True
                     # Run check_file if a file is found
                     if (os.path.isfile(os.path.join(input_folder, items)) and 
                         not skipme):
