@@ -148,13 +148,13 @@ class watch(Process):
     """ Class that controls the scan process """
     def __init__(self):
         global STOP
-        #global OS
         global SLASH
         global ORIGINAL_FOLDER
         if OS == 'nt':
             local_profile = os.getenv("userprofile")
             username = os.getenv("username")
             conf_file = 'config-windows.txt'
+            print conf_file
         elif OS == 'posix':
             local_profile = os.getenv("HOME")
             username = os.getenv("USER")
@@ -193,11 +193,16 @@ class watch(Process):
             self.input_folder = self.input_folder.replace('$USER', username)
             self.destination = self.destination.replace('$HOME', local_profile)
             self.input_folder = self.input_folder.replace('$HOME', local_profile)
+        # Attempt to make the backup path
         if not os.path.isdir(self.destination):
-            self.destination = (local_profile + SLASH + '.backup' + SLASH + 
+            try:
+                os.makedirs(self.destination)
+            except:
+                self.destination = (local_profile + SLASH + '.backup' + SLASH + 
                                 'BACKUP')
         if not os.path.isdir(self.input_folder):
             self.input_folder = local_profile
+        # used to strip useless folders from the backup path
         ORIGINAL_FOLDER = self.input_folder
         
 
@@ -305,18 +310,22 @@ class watch(Process):
         for items in self.skip_folder_list:
             if items.lower() in input_folder.lower():
                 skip_me = True
+                print 'skipping ' + items
         if not skip_me:
             try:
                 for items in os.listdir(input_folder):
                     skipme = False
                     for ignored in self.skip_file_list:
-                        if ignored.lower() in items.lower():
-                            skipme = True
-                        elif os.path.splitext(items)[1] in self.skip_file_list:
-                            skipme = True
-                        elif self.skip_tilde:
-                            if items[-1] == '~':
-                                skipme=True
+                        # don't try to process blank items
+                        if not items == '' and not ignored == '':
+                            if ignored.lower() in items.lower():
+                                skipme = True
+                            elif os.path.splitext(items)[1] in self.skip_file_list:
+                                if not os.path.splitext(items)[1] == '':
+                                    skipme = True
+                            elif self.skip_tilde:
+                                if items[-1] == '~':
+                                    skipme=True
                     # Run check_file if a file is found
                     if (os.path.isfile(os.path.join(input_folder, items)) and 
                         not skipme):
