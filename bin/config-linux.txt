@@ -1,11 +1,11 @@
 [conf]
 
-FolderPath = /home/$USER
+FolderPath = /home/$USER/test
 BackupPath = $HOME/.backup
 
 WaitTime = 1
-SkipFiles = .backup .hdrive .pst .ost .mp3 .avi .iso .mpg .msi .exe .mpeg .aac .wav .mp4 .wma .mov .mod .mts .tmp .dat .xbel .old .db .ICEauthority .pulse-cookie .xsession-errors .Xauthority
-SkipFolders = /.backup    /.mozilla    /.gvfs    /.dbus
-
-
-
+SkipFiles = .backup .hdrive .pst .ost .mp3 .avi .iso .mpg .msi .exe .mpeg .aac .wav .mp4 .wma .mov .mod .mts .tmp .dat .xbel .old .db .xsession-errors .bash_history .esd_auth .lock .ICEauthority .pulse-cookie application_state
+SkipFolders =    /drive_c    /dosdevices    /.config/google-chrome/Default    /.cache    /.csync    /.mozilla/firefox    /.fontconfig    /.thumbnails    /Trash    /.backup    /.gvfs    /.dbus
+SkipTildeFiles = True
+SkipHiddenFiles = False
+SkipHiddenFolders = False
