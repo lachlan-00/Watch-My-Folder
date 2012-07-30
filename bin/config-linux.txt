@@ -1,6 +1,6 @@
 [conf]
 
-FolderPath = /home/$USER/test
+FolderPath = /home/$USER
 BackupPath = $HOME/.backup
 
 WaitTime = 1

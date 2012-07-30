@@ -153,6 +153,7 @@ class watch(Process):
         if OS == 'nt':
             local_profile = os.getenv("userprofile")
             username = os.getenv("username")
+            homeshare = os.getenv("homeshare")
             conf_file = 'config-windows.txt'
             print conf_file
         elif OS == 'posix':
@@ -183,6 +184,10 @@ class watch(Process):
                                                         local_profile)
             self.input_folder = self.input_folder.replace('%userprofile%', 
                                                         local_profile)
+            self.destination = self.destination.replace('%homeshare%', 
+                                                        homeshare)
+            self.input_folder = self.input_folder.replace('%homeshare%', 
+                                                        homeshare)
             self.skip_tilde = False
         if OS == 'posix':
             if self.conf.get('conf', 'SkipTildeFiles') == 'True':

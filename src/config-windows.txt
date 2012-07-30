@@ -3,7 +3,7 @@
 FolderPath = %userprofile%
 BackupPath = C:\Users\%username%\.backup\BACKUP
 
-WaitTime = 1
+WaitTime = 5
 SkipFiles = $RECYCLE.BIN RECYCLER .backup .pst .ost .mp3 .avi .iso .mpg .msi .exe .mpeg .aac .wav .mp4 .wma .mov .mod .mts .tmp .dat .xbel .old .db  .automaticDestinations-ms .customDestinations-ms .oab
 SkipFolders =    \Google\Chrome\User Data    \AppData\Local\Temp    \Microsoft\Windows\Temporary Internet Files    \Microsoft\CryptnetUrlCache    \Windows\History\History.IE5    \Windows\Cookies    \Mozilla\Firefox\Profiles    \.backup
 SkipTildeFiles = True
