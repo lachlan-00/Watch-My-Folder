@@ -162,6 +162,7 @@ class watch(Process):
             username = os.getenv("username")
             homeshare = os.getenv("homeshare")
             conf_file = 'config-windows.txt'
+            print conf_file
         elif OS == 'posix':
             local_profile = os.getenv("HOME")
             username = os.getenv("USER")
@@ -188,10 +189,16 @@ class watch(Process):
                                                         local_profile)
             self.input_folder = self.input_folder.replace('%userprofile%', 
                                                         local_profile)
+<<<<<<< HEAD
             if not homeshare == None:
                 self.destination = self.destination.replace('%homeshare%', 
                                                         homeshare)
                 self.input_folder = self.input_folder.replace('%homeshare%', 
+=======
+            self.destination = self.destination.replace('%homeshare%', 
+                                                        homeshare)
+            self.input_folder = self.input_folder.replace('%homeshare%', 
+>>>>>>> 5c9074a511f5d7506347d8d1790a046e2dc465b0
                                                         homeshare)
             self.skip_tilde = False
         if OS == 'posix':
@@ -322,7 +329,11 @@ class watch(Process):
             if items.lower() in input_folder.lower():
                 skip_me = True
                 print 'skipping ' + items
+<<<<<<< HEAD
         if not skip_me and not STOP:
+=======
+        if not skip_me:
+>>>>>>> 5c9074a511f5d7506347d8d1790a046e2dc465b0
             try:
                 for items in os.listdir(input_folder):
                     skipme = False
