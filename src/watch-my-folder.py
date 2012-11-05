@@ -27,6 +27,7 @@ import os
 import time
 import shutil
 import ConfigParser
+import threading
 
 from multiprocessing import Process
 from threading import Thread
@@ -48,12 +49,15 @@ class WorkerThread(Thread):
         super(WorkerThread, self).__init__()
         self._notify_window = notify_window
         self._want_abort = 0
+        self._stop = threading.Event()
+        self.setDaemon(True)
         # This starts the thread running on creation, but you could
         # also make the GUI thread responsible for calling this
         self.start()
 
     def run(self):
         watch.main(watch())
+        Thread.__init__(self)
 
 
 class watch_my_folder(gtk.Builder):
@@ -93,12 +97,13 @@ class watch_my_folder(gtk.Builder):
         global STOP
         if not self.worker:
             self.worker = WorkerThread(self)
-        if self.worker.is_alive():
-            print 'already started'
-        else:
-            print 'starting'
-            STOP = False
-            self.worker.__init__(self)
+        print 'starting'
+        STOP = False
+        try:
+            self.worker.start()
+        except RuntimeError:
+            #error will occue when trying to restart a thread that is running
+            print 'already running'
 
 
     def stop_scan(self, *args):
@@ -107,11 +112,8 @@ class watch_my_folder(gtk.Builder):
         self.statuslabel.set_text('Scan Stopped')
         if not self.worker:
             self.worker = WorkerThread(self)
-        if self.worker.is_alive():
-            print 'stopping'
-            watch.stop_main(watch())
-        else:
-            print 'already stopped'
+        print 'stopping'
+        self.worker._stop.set()
         STOP = True
         return
                 
@@ -119,6 +121,9 @@ class watch_my_folder(gtk.Builder):
     def quit(self, button):
         """ Close down the program and quit the main loop """
         self.stop_scan()
+        self.worker._Thread__stop()
+        self.statusicon.set_visible(False)
+        self.window.destroy()
         #quit the gtk main loop
         gtk.main_quit()
         return False
@@ -148,12 +153,14 @@ class watch(Process):
     """ Class that controls the scan process """
     def __init__(self):
         global STOP
-        #global OS
         global SLASH
         global ORIGINAL_FOLDER
+        if STOP:
+            return False
         if OS == 'nt':
             local_profile = os.getenv("userprofile")
             username = os.getenv("username")
+            homeshare = os.getenv("homeshare")
             conf_file = 'config-windows.txt'
         elif OS == 'posix':
             local_profile = os.getenv("HOME")
@@ -161,8 +168,6 @@ class watch(Process):
             conf_file = 'config-linux.txt'
         else:
             STOP = True
-        if STOP:
-            return
         self.conf = ConfigParser.RawConfigParser()
         self.conf.read(conf_file)
         self.skip_file_list = self.conf.get('conf', 'SkipFiles').split(' ')
@@ -183,6 +188,11 @@ class watch(Process):
                                                         local_profile)
             self.input_folder = self.input_folder.replace('%userprofile%', 
                                                         local_profile)
+            if not homeshare == None:
+                self.destination = self.destination.replace('%homeshare%', 
+                                                        homeshare)
+                self.input_folder = self.input_folder.replace('%homeshare%', 
+                                                        homeshare)
             self.skip_tilde = False
         if OS == 'posix':
             if self.conf.get('conf', 'SkipTildeFiles') == 'True':
@@ -193,11 +203,16 @@ class watch(Process):
             self.input_folder = self.input_folder.replace('$USER', username)
             self.destination = self.destination.replace('$HOME', local_profile)
             self.input_folder = self.input_folder.replace('$HOME', local_profile)
+        # Attempt to make the backup path
         if not os.path.isdir(self.destination):
-            self.destination = (local_profile + SLASH + '.backup' + SLASH + 
+            try:
+                os.makedirs(self.destination)
+            except:
+                self.destination = (local_profile + SLASH + '.backup' + SLASH + 
                                 'BACKUP')
         if not os.path.isdir(self.input_folder):
             self.input_folder = local_profile
+        # used to strip useless folders from the backup path
         ORIGINAL_FOLDER = self.input_folder
         
 
@@ -209,6 +224,7 @@ class watch(Process):
         if STOP:
             return
         input_file = args[0]
+
         backup_path = args[1]
         insplit = os.path.dirname(input_file).split(SLASH)
         orig_folder =  ORIGINAL_FOLDER.split(SLASH)
@@ -305,18 +321,22 @@ class watch(Process):
         for items in self.skip_folder_list:
             if items.lower() in input_folder.lower():
                 skip_me = True
-        if not skip_me:
+                print 'skipping ' + items
+        if not skip_me and not STOP:
             try:
                 for items in os.listdir(input_folder):
                     skipme = False
                     for ignored in self.skip_file_list:
-                        if ignored.lower() in items.lower():
-                            skipme = True
-                        elif os.path.splitext(items)[1] in self.skip_file_list:
-                            skipme = True
-                        elif self.skip_tilde:
-                            if items[-1] == '~':
-                                skipme=True
+                        # don't try to process blank items
+                        if not items == '' and not ignored == '':
+                            if ignored.lower() in items.lower():
+                                skipme = True
+                            elif os.path.splitext(items)[1] in self.skip_file_list:
+                                if not os.path.splitext(items)[1] == '':
+                                    skipme = True
+                            elif self.skip_tilde:
+                                if items[-1] == '~':
+                                    skipme=True
                     # Run check_file if a file is found
                     if (os.path.isfile(os.path.join(input_folder, items)) and 
                         not skipme):
@@ -356,11 +376,6 @@ class watch(Process):
                     pass
                 print ''
             STARTED = False
-
-    def stop_main(self):
-        """ Set stop to force the main function to stop """
-        global STOP
-        STOP = True
 
 if __name__ == "__main__":
     gtk.gdk.threads_init()
