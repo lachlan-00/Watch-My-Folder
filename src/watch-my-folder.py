@@ -254,6 +254,7 @@ class watch(Process):
                     pass
             try:
                 shutil.copyfile(input_file, backup_file)
+                shutil.copystat(input_file, backup_file)
                 print 'New Backup: ' + backup_file
             except IOError:
                 pass
@@ -273,6 +274,7 @@ class watch(Process):
                                              (os.path.basename(new_file) + 
                                                  '-0.old')))
                         shutil.copyfile(five, zero)
+                        shutil.copyfile(five, zero)
                         temp_count = ['1', '2', '3', '4', '5']
                         for count in temp_count:
                             temp = '-' + count + '.old'
@@ -288,6 +290,7 @@ class watch(Process):
                     new_count = new_count + 1
                 shutil.move(backup_file, new_file)
                 try:
+                    shutil.copyfile(input_file, backup_file)
                     shutil.copyfile(input_file, backup_file)
                     print 'New Version: ' + new_file
                 except IOError:
