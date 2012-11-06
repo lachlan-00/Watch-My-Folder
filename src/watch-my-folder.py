@@ -162,7 +162,6 @@ class watch(Process):
             username = os.getenv("username")
             homeshare = os.getenv("homeshare")
             conf_file = 'config-windows.txt'
-            print conf_file
         elif OS == 'posix':
             local_profile = os.getenv("HOME")
             username = os.getenv("USER")
@@ -174,6 +173,7 @@ class watch(Process):
         self.skip_file_list = self.conf.get('conf', 'SkipFiles').split(' ')
         self.skip_folder_list = self.conf.get('conf', 'SkipFolders').split('    ')
         self.wait_time = self.conf.get('conf', 'WaitTime')
+        self.backup_enabled = self.conf.get('conf', 'BackupEnabled')
         try:
             self.wait_time = int(self.wait_time)
         except:
@@ -189,16 +189,10 @@ class watch(Process):
                                                         local_profile)
             self.input_folder = self.input_folder.replace('%userprofile%', 
                                                         local_profile)
-<<<<<<< HEAD
             if not homeshare == None:
                 self.destination = self.destination.replace('%homeshare%', 
                                                         homeshare)
                 self.input_folder = self.input_folder.replace('%homeshare%', 
-=======
-            self.destination = self.destination.replace('%homeshare%', 
-                                                        homeshare)
-            self.input_folder = self.input_folder.replace('%homeshare%', 
->>>>>>> 5c9074a511f5d7506347d8d1790a046e2dc465b0
                                                         homeshare)
             self.skip_tilde = False
         if OS == 'posix':
@@ -231,7 +225,6 @@ class watch(Process):
         if STOP:
             return
         input_file = args[0]
-
         backup_path = args[1]
         insplit = os.path.dirname(input_file).split(SLASH)
         orig_folder =  ORIGINAL_FOLDER.split(SLASH)
@@ -239,7 +232,7 @@ class watch(Process):
         for items in orig_folder:
             if not len(insplit) == 0:
                 for folders in insplit:
-                    if items in folders:
+                    if itemself.backup_enableds in folders:
                         try:
                             insplit.remove(items)
                         except ValueError:
@@ -264,7 +257,7 @@ class watch(Process):
                 print 'New Backup: ' + backup_file
             except IOError:
                 pass
-        elif os.path.isfile(backup_file):
+        elif os.path.isfile(backup_file) and self.backup_enabled == True:
             # Compare files and backup modified versions since the last cycle.
             if (not os.stat(input_file)[6] == os.stat(backup_file)[6] or 
                 not os.path.getmtime(input_file) < os.path.getmtime(backup_file)):
@@ -329,11 +322,7 @@ class watch(Process):
             if items.lower() in input_folder.lower():
                 skip_me = True
                 print 'skipping ' + items
-<<<<<<< HEAD
         if not skip_me and not STOP:
-=======
-        if not skip_me:
->>>>>>> 5c9074a511f5d7506347d8d1790a046e2dc465b0
             try:
                 for items in os.listdir(input_folder):
                     skipme = False
