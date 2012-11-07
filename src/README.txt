@@ -26,6 +26,8 @@ Settings:
    (Single space seperated. ' ')
  * SkipFolders - Skip directories that contains these strings.
    (Four space seperated. '    ')
+ * BackupEnabled - Enable/Disable file versioning in the backup folder.
+   (eg. file.doc will become file.doc-0.old when replaced)
 
 Supported Variables:
  Variables that can be used in your folder or backup path.
