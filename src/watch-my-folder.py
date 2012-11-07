@@ -164,24 +164,26 @@ class watch(Process):
     def __init__(self):
         global STOP
         global SLASH
-        global ORIGINAL_FOLDER
+        global ORIGINAL_DIR
         if STOP:
             return
+        # Set default file names according to OS
         if OS == 'nt':
-            local_profile = os.getenv("userprofile")
-            username = os.getenv("username")
+            profile_var = os.getenv("userprofile")
+            user_var = os.getenv("username")
             homeshare = os.getenv("homeshare")
             conf_file = 'config-windows.txt'
         elif OS == 'posix':
-            local_profile = os.getenv("HOME")
-            username = os.getenv("USER")
+            profile_var = os.getenv("HOME")
+            user_var = os.getenv("USER")
             conf_file = 'config-linux.txt'
         else:
             STOP = True
+        # Read config values
         self.conf = ConfigParser.RawConfigParser()
         self.conf.read(conf_file)
-        self.skip_file_list = self.conf.get('conf', 'SkipFiles').split(' ')
-        self.skip_folder_list = self.conf.get('conf', 'SkipFolders').split('    ')
+        self.skip_files = self.conf.get('conf', 'SkipFiles').split(' ')
+        self.skip_dirs = self.conf.get('conf', 'SkipFolders').split('    ')
         self.wait_time = self.conf.get('conf', 'WaitTime')
         if self.conf.get('conf', 'BackupEnabled') == "True":
             self.backup_enabled = True
@@ -200,58 +202,57 @@ class watch(Process):
         else:
             self.skip_hidden_files = False
         if self.conf.get('conf', 'SkipHiddenFolders') == 'True':
-            self.skip_hidden_folders = True
+            self.skip_hidden_dirs = True
         else:
-            self.skip_hidden_folders = False
-        self.destination = self.conf.get('conf', 'BackupPath')
-        self.input_folder = self.conf.get('conf', 'FolderPath')
+            self.skip_hidden_dirs = False
+        self.destin = self.conf.get('conf', 'BackupPath')
+        self.ORIGINAL_DIR = self.conf.get('conf', 'FolderPath')
+        # Set OS specific config values
         if OS == 'nt':
-            self.destination = self.destination.replace('%username%', 
-                                                        username)
-            self.input_folder = self.input_folder.replace('%username%', 
-                                                        username)
-            self.destination = self.destination.replace('%userprofile%', 
-                                                        local_profile)
-            self.input_folder = self.input_folder.replace('%userprofile%', 
-                                                        local_profile)
+            self.destin = self.destin.replace('%username%', 
+                                                        user_var)
+            self.ORIGINAL_DIR = self.ORIGINAL_DIR.replace('%username%', 
+                                                          user_var)
+            self.destin = self.destin.replace('%userprofile%', profile_var)
+            self.ORIGINAL_DIR = self.ORIGINAL_DIR.replace('%userprofile%', 
+                                                          profile_var)
             if not homeshare == None:
-                self.destination = self.destination.replace('%homeshare%', 
-                                                        homeshare)
-                self.input_folder = self.input_folder.replace('%homeshare%', 
-                                                        homeshare)
+                self.destin = self.destin.replace('%homeshare%', homeshare)
+                self.ORIGINAL_DIR = self.ORIGINAL_DIR.replace('%homeshare%', 
+                                                              homeshare)
             self.skip_tilde = False
         if OS == 'posix':
-            self.destination = self.destination.replace('$USER', username)
-            self.input_folder = self.input_folder.replace('$USER', username)
-            self.destination = self.destination.replace('$HOME', local_profile)
-            self.input_folder = self.input_folder.replace('$HOME', local_profile)
+            self.destin = self.destin.replace('$USER', user_var)
+            self.ORIGINAL_DIR = self.ORIGINAL_DIR.replace('$USER', user_var)
+            self.destin = self.destin.replace('$HOME', profile_var)
+            self.ORIGINAL_DIR = self.ORIGINAL_DIR.replace('$HOME', profile_var)
         # Attempt to make the backup path
-        if not os.path.isdir(self.destination):
+        if not os.path.isdir(self.destin):
             try:
-                os.makedirs(self.destination)
+                os.makedirs(self.destin)
             except:
-                self.destination = (local_profile + SLASH + '.backup' + SLASH + 
-                                'BACKUP')
-        if not os.path.isdir(self.input_folder):
-            self.input_folder = local_profile
+                self.destin = (profile_var + SLASH + '.backup' + SLASH + 
+                               'BACKUP')
+        if not os.path.isdir(self.ORIGINAL_DIR):
+            self.ORIGINAL_DIR = profile_var
         # Used to strip useless folders from the backup path
-        ORIGINAL_FOLDER = self.input_folder
+        ORIGINAL_DIR = self.ORIGINAL_DIR
         
 
     def check_file(self, *args):
         """ File operation Function """
         global STOP
         global SLASH
-        global ORIGINAL_FOLDER
+        global ORIGINAL_DIR
         if STOP:
             return
-        input_file = args[0]
+        in_file = args[0]
         backup_path = args[1]
-        insplit = os.path.dirname(input_file).split(SLASH)
-        orig_folder =  ORIGINAL_FOLDER.split(SLASH)
+        insplit = os.path.dirname(in_file).split(SLASH)
+        orig_dir =  ORIGINAL_DIR.split(SLASH)
         outdir = ''
         # Remove the base folder from the backup base path
-        for items in orig_folder:
+        for items in orig_dir:
             if not len(insplit) == 0:
                 for folders in insplit:
                     if items in folders:
@@ -262,30 +263,30 @@ class watch(Process):
         for items in insplit:
             outdir = outdir + SLASH + items
         backup_file = (os.path.normpath(backup_path + outdir + SLASH + 
-                        (os.path.basename(input_file))))
+                        (os.path.basename(in_file))))
         backup_dir = os.path.dirname(backup_file)
         # Only backup files that contain data
-        if os.stat(input_file)[6] == 0:
+        if os.stat(in_file)[6] == 0:
             pass
-        if self.skip_hidden_files and os.path.split(input_file)[-1][0] == '.':
-                print 'Skipping: ' + input_file
+        if self.skip_hidden_files and os.path.split(in_file)[-1][0] == '.':
+                print 'Skipping: ' + in_file
         # Copy file if it doesn't exist in backup location
         elif not os.path.isfile(backup_file):
             if not os.path.exists(backup_dir):
                 try:
                     os.makedirs(backup_dir)
-                    shutil.copystat(os.path.dirname(input_file), backup_dir)
+                    shutil.copystat(os.path.dirname(in_file), backup_dir)
                 except:
                     pass
             try:
-                shutil.copy2(input_file, backup_file)
+                shutil.copy2(in_file, backup_file)
                 print 'New Backup: ' + backup_file
             except IOError:
                 pass
         elif os.path.isfile(backup_file):
             # Compare files and backup modified versions since the last cycle.
-            if (not os.stat(input_file)[6] == os.stat(backup_file)[6] or 
-                os.stat(input_file)[8] > os.stat(backup_file)[8]):
+            if (not os.stat(in_file)[6] == os.stat(backup_file)[6] or 
+                os.stat(in_file)[8] > os.stat(backup_file)[8]):
                 new_file = backup_file
                 new_count = 0
                 # Create new destination (for versioning)
@@ -293,17 +294,17 @@ class watch(Process):
                     if new_count == 6:
                         five = (os.path.join(os.path.dirname(new_file), 
                                              (os.path.basename(new_file) + 
-                                                 '-5.old')))
+                                             '-5.old')))
                         zero = (os.path.join(os.path.dirname(new_file), 
                                              (os.path.basename(new_file) + 
-                                                 '-0.old')))
+                                             '-0.old')))
                         shutil.copy2(five, zero)
                         temp_count = ['1', '2', '3', '4', '5']
                         for count in temp_count:
                             temp = '-' + count + '.old'
                             os.remove(os.path.join(os.path.dirname(new_file), 
                                                   (os.path.basename(new_file) +
-                                                      temp)))
+                                                  temp)))
                         new_count = 1
                     temp = '-' + str(new_count) + '.old'
                     old_file = os.path.join(os.path.dirname(new_file), 
@@ -315,7 +316,7 @@ class watch(Process):
                     shutil.move(backup_file, new_file)
                     print 'Backup Created: ' + new_file
                 try:
-                    shutil.copy2(input_file, backup_file)
+                    shutil.copy2(in_file, backup_file)
                     print 'New Version: ' + backup_file
                 except IOError:
                     # Error: File in Use
@@ -335,7 +336,7 @@ class watch(Process):
             strtest = os.path.split(input_string)[-1][0]
             if STOP:
                 return False
-            elif self.skip_hidden_folders and strtest == '.':
+            elif self.skip_hidden_dirs and strtest == '.':
                 print 'Skipping: ' + input_string
             else:
                 print 'Opening: ' + input_string
@@ -349,37 +350,37 @@ class watch(Process):
         if STOP:
             return
         backup_path = args[0]
-        input_folder = args[1]
+        input_dir = args[1]
         skip_me = False
-        for items in self.skip_folder_list:
-            if items.lower() in input_folder.lower():
+        for items in self.skip_dirs:
+            if items.lower() in input_dir.lower():
                 skip_me = True
                 print 'skipping ' + items
         if not skip_me and not STOP:
             try:
-                for items in os.listdir(input_folder):
+                for items in os.listdir(input_dir):
                     skipme = False
-                    for ignored in self.skip_file_list:
+                    for ignored in self.skip_files:
                         # Don't try to process blank items
                         if not items == '' and not ignored == '':
                             if ignored.lower() in items.lower():
                                 skipme = True
-                            elif os.path.splitext(items)[1] in self.skip_file_list:
+                            elif os.path.splitext(items)[1] in self.skip_files:
                                 if not os.path.splitext(items)[1] == '':
                                     skipme = True
                             elif self.skip_tilde:
                                 if items[-1] == '~':
                                     skipme=True
                     # Run check_file if a file is found
-                    if (os.path.isfile(os.path.join(input_folder, items)) and 
-                        not skipme):
-                        self.check_file(os.path.join(input_folder, items), 
+                    if (os.path.isfile(os.path.join(input_dir, items)) and 
+                            not skipme):
+                        self.check_file(os.path.join(input_dir, items), 
                                         backup_path)
                     # Run check_folder if a folder is found
-                    if (os.path.isdir(os.path.join(input_folder, items)) and 
-                        not skipme):
-                        self.check_folder(os.path.join(input_folder, items), 
-                                              backup_path)
+                    if (os.path.isdir(os.path.join(input_dir, items)) and 
+                            not skipme):
+                        self.check_folder(os.path.join(input_dir, items), 
+                                          backup_path)
             # Ignore Inaccessible Directories
             except:
                 # Error: Inaccessible Directory
@@ -398,12 +399,12 @@ class watch(Process):
             while 1 and not STOP:
                 time.sleep(self.wait_time)
                 try:
-                    if not os.path.exists(self.destination):
-                        os.makedirs(self.destination)
-                    if not os.path.exists(self.input_folder):
-                        os.makedirs(self.input_folder)
-                    shutil.copystat(self.input_folder, self.destination)
-                    self.watch_folder(self.destination, self.input_folder)
+                    if not os.path.exists(self.destin):
+                        os.makedirs(self.destin)
+                    if not os.path.exists(self.ORIGINAL_DIR):
+                        os.makedirs(self.ORIGINAL_DIR)
+                    shutil.copystat(self.ORIGINAL_DIR, self.destin)
+                    self.watch_folder(self.destin, self.ORIGINAL_DIR)
                 except:
                     # Skip error when directory is missing
                     print '** Error: Moving to next directory'
