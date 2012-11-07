@@ -173,7 +173,10 @@ class watch(Process):
         self.skip_file_list = self.conf.get('conf', 'SkipFiles').split(' ')
         self.skip_folder_list = self.conf.get('conf', 'SkipFolders').split('    ')
         self.wait_time = self.conf.get('conf', 'WaitTime')
-        self.backup_enabled = self.conf.get('conf', 'BackupEnabled')
+        if self.conf.get('conf', 'BackupEnabled') == "True":
+            self.backup_enabled = True
+        else:
+            self.backup_enabled = False
         try:
             self.wait_time = int(self.wait_time)
         except:
@@ -232,7 +235,7 @@ class watch(Process):
         for items in orig_folder:
             if not len(insplit) == 0:
                 for folders in insplit:
-                    if itemself.backup_enableds in folders:
+                    if items in folders:
                         try:
                             insplit.remove(items)
                         except ValueError:
@@ -250,18 +253,18 @@ class watch(Process):
             if not os.path.exists(backup_dir):
                 try:
                     os.makedirs(backup_dir)
+                    shutil.copystat(os.path.dirname(input_file), backup_dir)
                 except:
                     pass
             try:
-                shutil.copyfile(input_file, backup_file)
-                shutil.copystat(input_file, backup_file)
+                shutil.copy2(input_file, backup_file)
                 print 'New Backup: ' + backup_file
             except IOError:
                 pass
-        elif os.path.isfile(backup_file) and self.backup_enabled == True:
+        elif os.path.isfile(backup_file):
             # Compare files and backup modified versions since the last cycle.
             if (not os.stat(input_file)[6] == os.stat(backup_file)[6] or 
-                not os.path.getmtime(input_file) < os.path.getmtime(backup_file)):
+                os.stat(input_file)[8] > os.stat(backup_file)[8]):
                 new_file = backup_file
                 new_count = 0
                 # Create new destination (for versioning)
@@ -273,8 +276,7 @@ class watch(Process):
                         zero = (os.path.join(os.path.dirname(new_file), 
                                              (os.path.basename(new_file) + 
                                                  '-0.old')))
-                        shutil.copyfile(five, zero)
-                        shutil.copyfile(five, zero)
+                        shutil.copy2(five, zero)
                         temp_count = ['1', '2', '3', '4', '5']
                         for count in temp_count:
                             temp = '-' + count + '.old'
@@ -288,11 +290,12 @@ class watch(Process):
                     if not os.path.isfile(old_file):
                         new_file = old_file
                     new_count = new_count + 1
-                shutil.move(backup_file, new_file)
+                if self.backup_enabled:
+                    shutil.move(backup_file, new_file)
+                    print 'Backup Created: ' + new_file
                 try:
-                    shutil.copyfile(input_file, backup_file)
-                    shutil.copyfile(input_file, backup_file)
-                    print 'New Version: ' + new_file
+                    shutil.copy2(input_file, backup_file)
+                    print 'New Version: ' + backup_file
                 except IOError:
                     # Error: File in Use
                     pass
@@ -353,6 +356,7 @@ class watch(Process):
             # Ignore Inaccessible Directories
             except:
                 # Error: Inaccessible Directory
+                print 'ERROR'
                 pass
         return
 
@@ -372,6 +376,7 @@ class watch(Process):
                         os.makedirs(self.destination)
                     if not os.path.exists(self.input_folder):
                         os.makedirs(self.input_folder)
+                    shutil.copystat(self.input_folder, self.destination)
                     self.watch_folder(self.destination, self.input_folder)
                 except:
                     # Skip error when directory is missing
