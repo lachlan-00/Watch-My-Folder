@@ -1,13 +1,24 @@
 [conf]
 
+# Input Folder #
 FolderPath = /home/$USER
-BackupPath = $HOME/.backup
 
-WaitTime = 3
+# Destination Folder #
+BackupPath = $HOME/.backup/Backup
+
+# Skip files with the following file types #
 SkipFiles = .backup .hdrive .pst .ost .mp3 .avi .iso .mpg .msi .exe .mpeg .aac .wav .mp4 .wma .mov .mod .mts .tmp .dat .xbel .old .db .xsession-errors .bash_history .esd_auth .lock .ICEauthority .pulse-cookie application_state
-SkipFolders =    /drive_c    /dosdevices    /.config/google-chrome/Default    /.cache    /.csync    /.mozilla/firefox    /.fontconfig    /.thumbnails    /Trash    /.backup    /.gvfs    /.dbus
 
+# Skip folders that contain the following paths #
+SkipFolders =    /drive_c    /dosdevices    /.config/google-chrome/Default    /.cache    /.csync    /.mozilla/firefox    /.fontconfig    /.thumbnails    /.local/share/Trash    /.backup    /.gvfs    /.dbus
+
+# Time to wait between opening the next folder #
+WaitTime = 3
+
+# Create Shadow Copies for basic versioning #
 BackupEnabled = True
+
+# Linux style hidden files/folders #
 SkipTildeFiles = True
-SkipHiddenFiles = False
-SkipHiddenFolders = False
+SkipHiddenFiles = True
+SkipHiddenFolders = True

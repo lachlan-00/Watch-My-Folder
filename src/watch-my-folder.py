@@ -54,6 +54,7 @@ class WorkerThread(Thread):
         # This starts the thread running on creation, but you could
         # also make the GUI thread responsible for calling this
         self.start()
+        return None
 
     def run(self):
         watch.main(watch())
@@ -76,18 +77,18 @@ class watch_my_folder(gtk.Builder):
         self.startbutton.connect("clicked", self.start_scan)
         self.stopbutton = self.builder.get_object("stopbutton")
         self.stopbutton.connect("clicked", self.stop_scan)
-        #show all of the stuff
+        # Show all of the stuff
         self.window.show_all()
-        #make a status icon
+        # Make a status icon
         self.statusicon = gtk.status_icon_new_from_file('watch.png')
         self.statusicon.connect('activate', self.status_clicked )
         self.statusicon.set_tooltip("Watch My Folder")
         self.window.hide()
-        #Start main function first
+        # Start main function first
         self.worker = None
         if not self.worker:
             self.worker = WorkerThread(self)
-        #start the gtk main loop
+        # Start the gtk main loop
         gtk.main()
 
 
@@ -97,14 +98,16 @@ class watch_my_folder(gtk.Builder):
         global STOP
         if not self.worker:
             self.worker = WorkerThread(self)
-        print 'starting'
-        STOP = False
+        # Attempt to stop the watch process
         try:
+            STOP = False
             self.worker.start()
+            print 'starting'
         except RuntimeError:
-            #error will occue when trying to restart a thread that is running
+            # Error will occur when trying to restart a started thread
             print 'already running'
-
+            pass
+            
 
     def stop_scan(self, *args):
         """ Stop the scan process """
@@ -112,19 +115,26 @@ class watch_my_folder(gtk.Builder):
         self.statuslabel.set_text('Scan Stopped')
         if not self.worker:
             self.worker = WorkerThread(self)
-        print 'stopping'
-        self.worker._stop.set()
-        STOP = True
+        # Tell us if the process is stopping/stopped already
+        if STOP:
+            print 'already stopped'
+        # Stop if we haven't already
+        else:
+            STOP = True
+            self.worker._stop.set()
+            print 'stopping'
         return
                 
 
     def quit(self, button):
         """ Close down the program and quit the main loop """
         self.stop_scan()
+        # Permanently stop the process thread
         self.worker._Thread__stop()
+        # Remove the icon and window
         self.statusicon.set_visible(False)
         self.window.destroy()
-        #quit the gtk main loop
+        # Quit the gtk main loop
         gtk.main_quit()
         return False
 
@@ -132,7 +142,7 @@ class watch_my_folder(gtk.Builder):
     def delete_event(self,window, event):
         """ Hide the window then the close button is clicked """
         global WINDOWOPEN
-        #don't delete; hide instead
+        # Don't delete; hide instead
         self.window.hide_on_delete()
         WINDOWOPEN = False
         return True
@@ -141,7 +151,7 @@ class watch_my_folder(gtk.Builder):
     def status_clicked(self, status):
         """ hide and unhide the window when clicking the status icon """
         global WINDOWOPEN
-        #unhide the window
+        # Unhide the window
         if not WINDOWOPEN:
             self.window.show_all()
             WINDOWOPEN = True
@@ -156,7 +166,7 @@ class watch(Process):
         global SLASH
         global ORIGINAL_FOLDER
         if STOP:
-            return False
+            return
         if OS == 'nt':
             local_profile = os.getenv("userprofile")
             username = os.getenv("username")
@@ -181,6 +191,18 @@ class watch(Process):
             self.wait_time = int(self.wait_time)
         except:
             self.wait_time = 1
+        if self.conf.get('conf', 'SkipTildeFiles') == 'True':
+            self.skip_tilde =  True
+        else:
+            self.skip_tilde =  False
+        if self.conf.get('conf', 'SkipHiddenFiles') == 'True':
+            self.skip_hidden_files = True
+        else:
+            self.skip_hidden_files = False
+        if self.conf.get('conf', 'SkipHiddenFolders') == 'True':
+            self.skip_hidden_folders = True
+        else:
+            self.skip_hidden_folders = False
         self.destination = self.conf.get('conf', 'BackupPath')
         self.input_folder = self.conf.get('conf', 'FolderPath')
         if OS == 'nt':
@@ -199,10 +221,6 @@ class watch(Process):
                                                         homeshare)
             self.skip_tilde = False
         if OS == 'posix':
-            if self.conf.get('conf', 'SkipTildeFiles') == 'True':
-                self.skip_tilde =  True
-            else:
-                self.skip_tilde =  False
             self.destination = self.destination.replace('$USER', username)
             self.input_folder = self.input_folder.replace('$USER', username)
             self.destination = self.destination.replace('$HOME', local_profile)
@@ -216,7 +234,7 @@ class watch(Process):
                                 'BACKUP')
         if not os.path.isdir(self.input_folder):
             self.input_folder = local_profile
-        # used to strip useless folders from the backup path
+        # Used to strip useless folders from the backup path
         ORIGINAL_FOLDER = self.input_folder
         
 
@@ -232,6 +250,7 @@ class watch(Process):
         insplit = os.path.dirname(input_file).split(SLASH)
         orig_folder =  ORIGINAL_FOLDER.split(SLASH)
         outdir = ''
+        # Remove the base folder from the backup base path
         for items in orig_folder:
             if not len(insplit) == 0:
                 for folders in insplit:
@@ -248,6 +267,8 @@ class watch(Process):
         # Only backup files that contain data
         if os.stat(input_file)[6] == 0:
             pass
+        if self.skip_hidden_files and os.path.split(input_file)[-1][0] == '.':
+                print 'Skipping: ' + input_file
         # Copy file if it doesn't exist in backup location
         elif not os.path.isfile(backup_file):
             if not os.path.exists(backup_dir):
@@ -281,8 +302,8 @@ class watch(Process):
                         for count in temp_count:
                             temp = '-' + count + '.old'
                             os.remove(os.path.join(os.path.dirname(new_file), 
-                                                   (os.path.basename(new_file) +
-                                                       temp)))
+                                                  (os.path.basename(new_file) +
+                                                      temp)))
                         new_count = 1
                     temp = '-' + str(new_count) + '.old'
                     old_file = os.path.join(os.path.dirname(new_file), 
@@ -309,9 +330,16 @@ class watch(Process):
         input_string = args[0]
         backup_path = args[1]
         if os.path.isdir(input_string):
-            # wait to reduce load
+            # Wait to reduce load
             time.sleep(self.wait_time)
-            self.watch_folder(backup_path, input_string)
+            strtest = os.path.split(input_string)[-1][0]
+            if STOP:
+                return False
+            elif self.skip_hidden_folders and strtest == '.':
+                print 'Skipping: ' + input_string
+            else:
+                print 'Opening: ' + input_string
+                self.watch_folder(backup_path, input_string)
         return
 
 
@@ -322,7 +350,6 @@ class watch(Process):
             return
         backup_path = args[0]
         input_folder = args[1]
-        print 'Opening: ' + input_folder
         skip_me = False
         for items in self.skip_folder_list:
             if items.lower() in input_folder.lower():
@@ -333,7 +360,7 @@ class watch(Process):
                 for items in os.listdir(input_folder):
                     skipme = False
                     for ignored in self.skip_file_list:
-                        # don't try to process blank items
+                        # Don't try to process blank items
                         if not items == '' and not ignored == '':
                             if ignored.lower() in items.lower():
                                 skipme = True
@@ -352,11 +379,10 @@ class watch(Process):
                     if (os.path.isdir(os.path.join(input_folder, items)) and 
                         not skipme):
                         self.check_folder(os.path.join(input_folder, items), 
-                                          backup_path)
+                                              backup_path)
             # Ignore Inaccessible Directories
             except:
                 # Error: Inaccessible Directory
-                print 'ERROR'
                 pass
         return
 
