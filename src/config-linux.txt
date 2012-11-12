@@ -7,7 +7,7 @@ FolderPath = /home/$USER
 BackupPath = $HOME/.backup/Backup
 
 # Skip files with the following file types #
-SkipFiles = .backup .hdrive .pst .ost .mp3 .avi .iso .mpg .msi .exe .mpeg .aac .wav .mp4 .wma .mov .mod .mts .tmp .dat .xbel .old .db .xsession-errors .bash_history .esd_auth .lock .ICEauthority .pulse-cookie application_state
+SkipFiles = .backup .hdrive .pst .ost .mp3 .avi .iso .mpg .msi .exe .mpeg .aac .wav .mp4 .wma .mov .mod .mts .tmp .dat .xbel .old .deleted .db .xsession-errors .bash_history .esd_auth .lock .ICEauthority .pulse-cookie application_state
 
 # Skip folders that contain the following paths #
 SkipFolders =    /drive_c    /dosdevices    /.config/google-chrome/Default    /.cache    /.csync    /.mozilla/firefox    /.fontconfig    /.thumbnails    /.local/share/Trash    /.backup    /.gvfs    /.dbus
@@ -17,6 +17,7 @@ WaitTime = 3
 
 # Create Shadow Copies for basic versioning #
 BackupEnabled = True
+MonitorDeletion = True
 
 # Linux style hidden files/folders #
 SkipTildeFiles = True

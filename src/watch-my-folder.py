@@ -184,7 +184,10 @@ class watch(Process):
         self.conf.read(conf_file)
         self.skip_files = self.conf.get('conf', 'SkipFiles').split(' ')
         self.skip_dirs = self.conf.get('conf', 'SkipFolders').split('    ')
-        self.wait_time = self.conf.get('conf', 'WaitTime')
+        if self.conf.get('conf', 'MonitorDeletion') == 'True':
+            self.check_delete = True
+        else:
+            self.check_delete = False
         if self.conf.get('conf', 'BackupEnabled') == "True":
             self.backup_enabled = True
         else:
@@ -387,6 +390,48 @@ class watch(Process):
                 pass
         return
 
+    #def check_deletions(self, *args):
+
+    def watch_deletions(self, *args):
+        """ mark files/folder in the backup that have been deleted """
+        global STOP
+        if self.check_delete:
+            backup_folder = args[0]
+            source_folder = args[1]
+            for items in os.listdir(backup_folder):
+                if STOP:
+                    return
+                tmp_backup = os.path.join(backup_folder, items)
+                tmp_source = os.path.join(source_folder, items)
+                # check for deletion if a file is found
+                if os.path.isfile(tmp_backup) and not os.path.isfile(tmp_source):
+                    skip_list = ['.old', '.deleted']
+                    if not os.path.splitext(items)[1] in skip_list:
+                        new_file = tmp_backup + '.deleted'
+                        try:
+                            # rename files that don't exist
+                            print 'Found Deleted File: ' + new_file
+                            shutil.move(tmp_backup, new_file)
+                        except:
+                            pass
+                if (os.path.isdir(tmp_backup)):
+                    try:
+                        if not os.path.isdir(tmp_source) and not tmp_backup[-8:] == '.deleted':
+                            # rename folders that don't exist
+                            removed_dir = tmp_backup + '.deleted'
+                            print 'Renaming deleted folder: ' + removed_dir
+                            shutil.move(tmp_backup, removed_dir)
+                        elif os.listdir(tmp_backup) == []:
+                            # cleanup empty folders
+                            print 'Removing empty folder: ' + tmp_backup
+                            os.rmdir(tmp_backup)
+                        else:
+                            # recheck when folder is found
+                            if not tmp_backup[-8:] == '.deleted':
+                                self.watch_deletions(tmp_backup, tmp_source)
+                    except:
+                        pass
+        return True
 
     def main(self, *args):
         """ Main Function """
@@ -405,6 +450,7 @@ class watch(Process):
                         os.makedirs(self.ORIGINAL_DIR)
                     shutil.copystat(self.ORIGINAL_DIR, self.destin)
                     self.watch_folder(self.destin, self.ORIGINAL_DIR)
+                    self.watch_deletions(self.destin, self.ORIGINAL_DIR)
                 except:
                     # Skip error when directory is missing
                     print '** Error: Moving to next directory'
