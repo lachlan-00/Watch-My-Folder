@@ -403,9 +403,9 @@ class watch(Process):
                     return
                 tmp_backup = os.path.join(backup_folder, items)
                 tmp_source = os.path.join(source_folder, items)
+                skip_list = ['.old', '.deleted']
                 # check for deletion if a file is found
                 if os.path.isfile(tmp_backup) and not os.path.isfile(tmp_source):
-                    skip_list = ['.old', '.deleted']
                     if not os.path.splitext(items)[1] in skip_list:
                         new_file = tmp_backup + '.deleted'
                         try:
@@ -427,7 +427,7 @@ class watch(Process):
                             os.rmdir(tmp_backup)
                         else:
                             # recheck when folder is found
-                            if not tmp_backup[-8:] == '.deleted':
+                            if not tmp_backup[-8:] == skip_list[1]:
                                 self.watch_deletions(tmp_backup, tmp_source)
                     except:
                         pass
