@@ -1,2 +1,3 @@
 #!/bin/sh
-./watch/watch-my-folder.py
+cd ./watch
+./watch-my-folder.py
