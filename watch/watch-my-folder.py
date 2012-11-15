@@ -40,6 +40,7 @@ OS = os.name
 if OS == 'nt':
     SLASH = '\\'
 elif OS == 'posix':
+    import socket
     SLASH = '/'
 
 class WorkerThread(Thread):
@@ -177,7 +178,9 @@ class watch(Process):
         elif OS == 'posix':
             profile_var = os.getenv("HOME")
             user_var = os.getenv("USER")
+            comp_var = socket.gethostname()
             conf_file = 'config-linux.txt'
+            print comp_var
         else:
             STOP = True
         # Read config values
@@ -232,6 +235,8 @@ class watch(Process):
         if OS == 'posix':
             self.destin = self.destin.replace('$USER', user_var)
             self.ORIGINAL_DIR = self.ORIGINAL_DIR.replace('$USER', user_var)
+            self.destin = self.destin.replace('$HOSTNAME', comp_var)
+            self.ORIGINAL_DIR = self.ORIGINAL_DIR.replace('$HOSTNAME', comp_var)
             self.destin = self.destin.replace('$HOME', profile_var)
             self.ORIGINAL_DIR = self.ORIGINAL_DIR.replace('$HOME', profile_var)
         # Attempt to make the backup path

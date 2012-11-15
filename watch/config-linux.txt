@@ -4,7 +4,7 @@
 FolderPath = /home/$USER
 
 # Destination Folder #
-BackupPath = $HOME/.backup/Backup
+BackupPath = $HOME/.backup/$HOSTNAME
 
 # Skip files with the following file types #
 SkipFiles = .backup .hdrive .pst .ost .mp3 .avi .iso .mpg .msi .exe .mpeg .aac .wav .mp4 .wma .mov .mod .mts .tmp .dat .xbel .old .deleted .db .xsession-errors .bash_history .esd_auth .lock .ICEauthority .pulse-cookie application_state
