@@ -171,6 +171,7 @@ class watch(Process):
         if OS == 'nt':
             profile_var = os.getenv("userprofile")
             user_var = os.getenv("username")
+            comp_var = os.getenv("computername")
             homeshare = os.getenv("homeshare")
             conf_file = 'config-windows.txt'
         elif OS == 'posix':
@@ -216,6 +217,10 @@ class watch(Process):
                                                         user_var)
             self.ORIGINAL_DIR = self.ORIGINAL_DIR.replace('%username%', 
                                                           user_var)
+            self.destin = self.destin.replace('%computername%', 
+                                                        comp_var)
+            self.ORIGINAL_DIR = self.ORIGINAL_DIR.replace('%computername%', 
+                                                          comp_var)
             self.destin = self.destin.replace('%userprofile%', profile_var)
             self.ORIGINAL_DIR = self.ORIGINAL_DIR.replace('%userprofile%', 
                                                           profile_var)

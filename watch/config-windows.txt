@@ -4,7 +4,7 @@
 FolderPath = %userprofile%
 
 # Destination Folder #
-BackupPath = %userprofile%\.backup\BACKUP
+BackupPath = ..\.backup\%computername%
 
 # Skip files with the following file types #
 SkipFiles = $RECYCLE.BIN RECYCLER .backup .pst .ost .mp3 .avi .iso .mpg .msi .exe .mpeg .aac .wav .mp4 .wma .mov .mod .mts .tmp .dat .xbel .old .deleted .db  .automaticDestinations-ms .customDestinations-ms .oab
