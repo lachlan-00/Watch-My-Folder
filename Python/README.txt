@@ -1,1 +1,1 @@
-python.exe location when using the portable version
+Extract Python.zip file to this folder to use portable python.
